@@ -96,7 +96,7 @@ class QQController extends AbstractProvider
 
   protected function getOpenidUrl(AccessToken $token)
   {
-    return $this->domain . '/oauth2.0/me?access_token=' . $token . '&fmt=json';
+    return self::BASE_AUTH_URL . '/oauth2.0/me?access_token=' . $token . '&fmt=json';
   }
 
   public function fetchOpenId(AccessToken $token)
