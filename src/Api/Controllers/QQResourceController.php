@@ -24,8 +24,24 @@ class QQResourceController implements ResourceOwnerInterface {
      * @return string|null
      */
     public function getId(){
-        return;
+        return $this->response['openid'] ?: null;
     }
+
+    public function getNickname()
+    {
+        return $this->response['nickname'] ?: null;
+    }
+
+    public function getHeadImgUrl()
+    {
+        return $this->response['figureurl_qq_1'] ?: null;
+    }
+
+    public function getSex()
+    {
+        return $this->response['gender'] ?: null;
+    }
+
     /**
      * Return all of the owner details available as an array.
      *

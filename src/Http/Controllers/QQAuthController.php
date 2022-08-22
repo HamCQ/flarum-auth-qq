@@ -3,14 +3,13 @@
 namespace HamZone\QQAuth\Http\Controllers;
 
 use Exception;
-// use NomisCZ\WeChatAuth\Http\Controllers\WXRespFactoryController;
+use HamZone\QQAuth\Http\Controllers\QQResponseFactory;
+use HamZone\QQAuth\Api\Controllers\QQController;
 
 use Flarum\Forum\Auth\Registration;
 use Flarum\Http\UrlGenerator;
 use Flarum\Settings\SettingsRepositoryInterface;
-use NomisCZ\OAuth2\Client\Provider\WeChat;
-use NomisCZ\OAuth2\Client\Provider\WeChatOffical;
-use NomisCZ\OAuth2\Client\Provider\WeChatResourceOwner;
+
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Server\RequestHandlerInterface;
@@ -19,7 +18,7 @@ use Laminas\Diactoros\Response\RedirectResponse;
 class QQAuthController implements RequestHandlerInterface
 {
     /**
-     * @var WXRespFactoryController
+     * @var QQResponseFactory
      */
     protected $response;
     /**
@@ -31,11 +30,11 @@ class QQAuthController implements RequestHandlerInterface
      */
     protected $url;
     /**
-     * @param WXRespFactoryController $response
+     * @param QQResponseFactory $response
      * @param SettingsRepositoryInterface $settings
      * @param UrlGenerator $url
      */
-    public function __construct(WXRespFactoryController $response, SettingsRepositoryInterface $settings, UrlGenerator $url)
+    public function __construct(QQResponseFactory $response, SettingsRepositoryInterface $settings, UrlGenerator $url)
     {
         $this->response = $response;
         $this->settings = $settings;
@@ -49,9 +48,9 @@ class QQAuthController implements RequestHandlerInterface
     public function handle(Request $request): ResponseInterface
     {
         $redirectUri = $this->url->to('forum')->route('auth.qq');
-        $provider = new WeChatOffical([
-            'appid' => $this->settings->get('flarum-ext-auth-wechat.mp_app_id'),
-            'secret' => $this->settings->get('flarum-ext-auth-wechat.mp_app_secret'),
+        $provider = new QQController([
+            'clientId' => $this->settings->get('flarum-ext-auth-qq.app_id'),
+            'secret' => $this->settings->get('flarum-ext-auth-qq.app_secret'),
             'redirect_uri' => $redirectUri,
         ]);
 
@@ -62,8 +61,7 @@ class QQAuthController implements RequestHandlerInterface
         if (!$code) {
             $authUrl = $provider->getAuthorizationUrl();
             $session->put('oauth2state', $provider->getState());
-            return new RedirectResponse($authUrl . '#wechat_redirect');
-            // return new RedirectResponse($authUrl . '&display=popup');
+            return new RedirectResponse($authUrl);
         }
 
         $state = array_get($queryParams, 'state');
@@ -80,7 +78,7 @@ class QQAuthController implements RequestHandlerInterface
 
         return $this->response->make(
             'QQ',
-            $user->getUnionId(),
+            $user->getId(),
             function (Registration $registration) use ($user) {
                 $registration
                     ->suggestUsername($user->getNickname())

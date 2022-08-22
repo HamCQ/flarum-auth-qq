@@ -58,8 +58,8 @@ class QQLinkController implements RequestHandlerInterface
         app('log')->debug( $_SERVER['HTTP_USER_AGENT'] );
 
         $provider = new QQController([
-            'appid' => $this->settings->get('flarum-ext-auth-wechat.mp_app_id'),
-            'secret' => $this->settings->get('flarum-ext-auth-wechat.mp_app_secret'),
+            'clientId' => $this->settings->get('flarum-ext-auth-qq.app_id'),
+            'secret' => $this->settings->get('flarum-ext-auth-qq.app_secret'),
             'redirect_uri' => $redirectUri,
         ]);
        
@@ -71,7 +71,7 @@ class QQLinkController implements RequestHandlerInterface
         if (!$code) {
             $authUrl = $provider->getAuthorizationUrl();
             $session->put('oauth2state', $provider->getState());
-            return new RedirectResponse($authUrl . '#wechat_redirect');
+            return new RedirectResponse($authUrl);
         }
 
         $state = array_get($queryParams, 'state');
@@ -86,14 +86,13 @@ class QQLinkController implements RequestHandlerInterface
         /** @var WeChatResourceOwner $user */
         $user = $provider->getResourceOwner($token);
 
-        if ($this->checkLoginProvider($user->getUnionId())) {
-            // app('log')->debug("checkLoginProvider");
+        if ($this->checkLoginProvider($user->getId())) {
             return $this->makeResponse('already_used');
         }
 
         $created = $actor->loginProviders()->create([
             'provider' => 'QQ',
-            'identifier' => $user->getUnionId()
+            'identifier' => $user->getId()
         ]);
 
         return $this->makeResponse($created ? 'done' : 'error');
@@ -101,7 +100,7 @@ class QQLinkController implements RequestHandlerInterface
 
     private function makeResponse($returnCode = 'done'): HtmlResponse
     {
-        $content = "<script>window.close();window.opener.app.wechat.linkDone('{$returnCode}');</script>";
+        $content = "<script>window.close();window.opener.app.qq.linkDone('{$returnCode}');</script>";
 
         return new HtmlResponse($content);
     }
@@ -109,7 +108,7 @@ class QQLinkController implements RequestHandlerInterface
     private function checkLoginProvider($identifier): bool
     {
         return $this->loginProvider->where([
-            ['provider', 'wechat'],
+            ['provider', 'QQ'],
             ['identifier', $identifier]
         ])->exists();
     }
