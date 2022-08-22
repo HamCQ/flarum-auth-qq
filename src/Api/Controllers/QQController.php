@@ -39,7 +39,7 @@ class QQController extends AbstractProvider
     $options['client_id'] = $this->clientId;
 
     if (!isset($options['redirect_uri'])) {
-      $options['redirect_uri'] = $this->redirectUri;
+      $options['redirect_uri'] = $this->redirect_uri;
     }
 
     $options += [
