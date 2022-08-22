@@ -77,7 +77,7 @@ class QQAuthController implements RequestHandlerInterface
 
         $openId = $provider->fetchOpenId($token);
         /** @var QQResourceController $user */
-        $user = $provider->getResourceOwnerDetailsUrl($openId);
+        $user = $provider->getResourceOwnerDetailsUrl($token, $openId);
 
         // $userInfo = $provider->fetchOpenId($token);
         app('log')->debug( "token:".$token );
