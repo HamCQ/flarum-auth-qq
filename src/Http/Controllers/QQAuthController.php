@@ -48,6 +48,7 @@ class QQAuthController implements RequestHandlerInterface
     public function handle(Request $request): ResponseInterface
     {
         $redirectUri = $this->url->to('forum')->route('auth.qq');
+        app('log')->debug( $redirectUri );
         $provider = new QQController([
             'clientId' => $this->settings->get('flarum-ext-auth-qq.app_id'),
             'secret' => $this->settings->get('flarum-ext-auth-qq.app_secret'),
@@ -67,7 +68,6 @@ class QQAuthController implements RequestHandlerInterface
         $state = array_get($queryParams, 'state');
 
         if (!$state || $state !== $session->get('oauth2state')) {
-
             $session->remove('oauth2state');
             throw new Exception('Invalid state');
         }
@@ -75,7 +75,7 @@ class QQAuthController implements RequestHandlerInterface
         $token = $provider->getAccessToken('authorization_code', compact('code'));
         /** @var WeChatResourceOwner $user */
         $user = $provider->getResourceOwner($token);
-
+        app('log')->debug( $user->getId() );
         return $this->response->make(
             'QQ',
             $user->getId(),

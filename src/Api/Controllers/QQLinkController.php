@@ -54,6 +54,9 @@ class QQLinkController implements RequestHandlerInterface
         }
 
         $redirectUri = $this->url->to('api')->route('auth.qq.api.link');
+        app('log')->debug( $redirectUri );
+        app('log')->debug( "handle" );
+
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
         app('log')->debug( $_SERVER['HTTP_USER_AGENT'] );
 

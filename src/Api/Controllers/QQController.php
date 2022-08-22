@@ -76,7 +76,7 @@ class QQController extends AbstractProvider
     $params = [
       'client_id'     => $this->clientId,
       'client_secret' => $this->secret,
-      'redirect_uri'  => $this->redirectUri,
+      'redirect_uri'  => $this->redirect_uri,
       'grant_type' => 'authorization_code',
       'fmt' => 'json',
     ];
