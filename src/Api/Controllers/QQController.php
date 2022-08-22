@@ -127,7 +127,7 @@ class QQController extends AbstractProvider
    * @return string
    * @throws IdentityProviderException
    */
-  public function getResourceOwnerDetails(AccessToken $token, string $openId = "")
+  public function getResourceOwnerDetailsUrl(AccessToken $token, string $openId = "")
   {
     $access_token = $token->getToken();
     $url = sprintf("%s/user/get_user_info?access_token=%s&oauth_consumer_key=%s&openid=%s", 
