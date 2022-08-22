@@ -3,9 +3,6 @@
 namespace HamZone\QQAuth\Http\Controllers;
 
 use Exception;
-use HamZone\QQAuth\Http\Controllers\QQResponseFactory;
-use HamZone\QQAuth\Api\Controllers\QQController;
-
 use Flarum\Forum\Auth\Registration;
 use Flarum\Http\UrlGenerator;
 use Flarum\Settings\SettingsRepositoryInterface;
@@ -14,6 +11,10 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Server\RequestHandlerInterface;
 use Laminas\Diactoros\Response\RedirectResponse;
+
+use HamZone\QQAuth\Http\Controllers\QQResponseFactory;
+use HamZone\QQAuth\Api\Controllers\QQController;
+use HamZone\QQAuth\Api\Controllers\QQResourceController;
 
 class QQAuthController implements RequestHandlerInterface
 {
@@ -73,9 +74,13 @@ class QQAuthController implements RequestHandlerInterface
         }
 
         $token = $provider->getAccessToken('authorization_code', compact('code'));
-        /** @var WeChatResourceOwner $user */
+        /** @var QQResourceController $user */
         $user = $provider->getResourceOwner($token);
+
+        app('log')->debug( "token:".$token );
+
         app('log')->debug( $user->getId() );
+        
         return $this->response->make(
             'QQ',
             $user->getId(),

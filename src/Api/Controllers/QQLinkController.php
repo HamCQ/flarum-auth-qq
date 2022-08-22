@@ -86,13 +86,13 @@ class QQLinkController implements RequestHandlerInterface
         }
 
         $token = $provider->getAccessToken('authorization_code', compact('code'));
-        /** @var WeChatResourceOwner $user */
+        /** @var QQResourceController $user */
         $user = $provider->getResourceOwner($token);
 
         if ($this->checkLoginProvider($user->getId())) {
             return $this->makeResponse('already_used');
         }
-
+                
         $created = $actor->loginProviders()->create([
             'provider' => 'QQ',
             'identifier' => $user->getId()
