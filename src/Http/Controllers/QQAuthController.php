@@ -75,7 +75,9 @@ class QQAuthController implements RequestHandlerInterface
 
         $token = $provider->getAccessToken('authorization_code', compact('code'));
 
-        $openId = $provider->fetchOpenId($token);
+        $fetchOpenId = $provider->fetchOpenId($token);
+        $openId = $fetchOpenId['openid'];
+        
         /** @var QQResourceController $user */
         $user = $provider->getResourceOwnerDetailsUrl($token, $openId);
 
