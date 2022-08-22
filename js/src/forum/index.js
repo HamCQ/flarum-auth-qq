@@ -1,7 +1,9 @@
 import { extend } from "flarum/extend";
 import app from "flarum/app";
+
 import LogInButtons from "flarum/components/LogInButtons";
 import QQLogInButton from "./components/QQLogInButton";
+
 import SettingsPage from 'flarum/components/SettingsPage';
 import Button from 'flarum/components/Button';
 

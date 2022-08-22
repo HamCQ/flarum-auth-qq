@@ -10,7 +10,9 @@
   "license": "MIT",
   "require": {
     "flarum/core": "*",
+    "fof/components": "^1.0.0",
     "league/oauth2-client": "^2.2",
+    "laravel/helpers": "^v1.4.1",
     "ext-json": "*"
   },
   "authors": [
