@@ -3,7 +3,7 @@ import app from "flarum/app";
 import LogInButtons from "flarum/components/LogInButtons";
 import QQLogInButton from "./components/QQLogInButton";
 
-app.initializers.add("hehongyuanlove-auth-qq", () => {
+app.initializers.add("hamzone-auth-qq", () => {
 
   extend(SettingsPage.prototype, 'accountItems', (items) => {
     const {
@@ -19,7 +19,7 @@ app.initializers.add("hehongyuanlove-auth-qq", () => {
     items.add(`linkQQAuth`,
         <Button className={`Button QQAuthButton--${isLinked ? 'danger' : 'success'}`} icon="fab fa-qq"
             path={`/auth/${name}`} onclick={() => app.modal.show(isLinked ? UnlinkModal : LinkModal)}>
-            {app.translator.trans(`hehongyuanlove-auth-qq.forum.buttons.${isLinked ? 'unlink' : 'link'}`)}
+            {app.translator.trans(`hamzone-auth-qq.forum.buttons.${isLinked ? 'unlink' : 'link'}`)}
         </Button>
     );
   });
@@ -31,7 +31,7 @@ app.initializers.add("hehongyuanlove-auth-qq", () => {
         className="Button LogInButton--QQ"
         icon="fab fa-qq">
         {app.translator.trans(
-          "hehongyuanlove-auth-qq.forum.log_in.with_qq_button"
+          "hamzone-auth-qq.forum.log_in.with_qq_button"
         )}
       </QQLogInButton>
     );
