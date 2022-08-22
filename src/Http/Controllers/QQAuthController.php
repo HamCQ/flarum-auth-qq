@@ -74,16 +74,21 @@ class QQAuthController implements RequestHandlerInterface
         }
 
         $token = $provider->getAccessToken('authorization_code', compact('code'));
-        /** @var QQResourceController $user */
-        $user = $provider->getResourceOwner($token);
 
+        $openId = $provider->fetchOpenId($token);
+        /** @var QQResourceController $user */
+        $user = $provider->getResourceOwnerDetailsUrl($openId);
+
+        // $userInfo = $provider->fetchOpenId($token);
         app('log')->debug( "token:".$token );
 
-        app('log')->debug( $user->getId() );
+        app('log')->debug( $openId );
+
+        app('log')->debug( $user->getNickname(). $user->getHeadImgUrl());
         
         return $this->response->make(
             'QQ',
-            $user->getId(),
+            $openId ,
             function (Registration $registration) use ($user) {
                 $registration
                     ->suggestUsername($user->getNickname())

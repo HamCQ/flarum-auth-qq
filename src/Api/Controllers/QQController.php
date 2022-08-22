@@ -94,6 +94,32 @@ class QQController extends AbstractProvider
         return new AccessToken($response);
   }
 
+  protected function getOpenidUrl(AccessToken $token)
+  {
+    return $this->domain . '/oauth2.0/me?access_token=' . $token . '&fmt=json';
+  }
+
+  public function fetchOpenId(AccessToken $token)
+  {
+    $url     = $this->getOpenidUrl($token);
+    $request = $this->getAuthenticatedRequest(self::METHOD_GET, $url, $token);
+    return $this->getSpecificResponse($request);
+  }
+
+  protected function getSpecificResponse(RequestInterface $request)
+  {
+    $response = $this->getResponse($request);
+    $parsed   = $this->parseSpecificResponse($response);
+    $this->checkResponse($response, $parsed);
+    return $parsed;
+  }
+
+  protected function parseSpecificResponse(ResponseInterface $response)
+  {
+    $content = (string) $response->getBody();
+    return json_decode($content, true);
+  }
+
   /**
    * Get provider url to fetch user details
    *
@@ -101,13 +127,12 @@ class QQController extends AbstractProvider
    * @return string
    * @throws IdentityProviderException
    */
-  public function getResourceOwnerDetailsUrl(AccessToken $token)
+  public function getResourceOwnerDetailsUrl(AccessToken $token, string $openId = "")
   {
     $access_token = $token->getToken();
-    $openid = $token->getValues()['openid'];
 
     return sprintf("%s/user/get_user_info?access_token=%s&oauth_consumer_key=%s&openid=%s", 
-      self::BASE_AUTH_URL, $access_token, $this->clientId, $openid);
+      self::BASE_AUTH_URL, $access_token, $this->clientId, $openId);
   }
 
   protected function getDefaultScopes()
@@ -117,7 +142,9 @@ class QQController extends AbstractProvider
 
   protected function checkResponse(ResponseInterface $response, $data)
   {
-      
+    if (isset($data['error'])) {
+      throw new IdentityProviderException($data['error_description'], $response->getStatusCode(), $response);
+    }
   }
 
   protected function createResourceOwner(array $response, AccessToken $token)
