@@ -4,20 +4,39 @@ import LogInButtons from "flarum/components/LogInButtons";
 import QQLogInButton from "./components/QQLogInButton";
 
 app.initializers.add("hehongyuanlove-auth-qq", () => {
-  extend(LogInButtons.prototype, "items", function (items) {
 
+  extend(SettingsPage.prototype, 'accountItems', (items) => {
+    const {
+        data: {
+            attributes: {
+                QQAuth: {
+                    isLinked = false
+                },
+            },
+        },
+    } = app.session.user;
+
+    items.add(`linkQQAuth`,
+        <Button className={`Button QQAuthButton--${isLinked ? 'danger' : 'success'}`} icon="fab fa-qq"
+            path={`/auth/${name}`} onclick={() => app.modal.show(isLinked ? UnlinkModal : LinkModal)}>
+            {app.translator.trans(`hehongyuanlove-auth-qq.forum.buttons.${isLinked ? 'unlink' : 'link'}`)}
+        </Button>
+    );
+  });
+
+  extend(LogInButtons.prototype, "items", function (items) {
     items.add(
       "QQAndH5",
       <QQLogInButton
         className="Button LogInButton--QQ"
-        icon="fab fa-qq"
-      >
+        icon="fab fa-qq">
         {app.translator.trans(
           "hehongyuanlove-auth-qq.forum.log_in.with_qq_button"
         )}
       </QQLogInButton>
     );
     return
-        
   });
+
+
 });
