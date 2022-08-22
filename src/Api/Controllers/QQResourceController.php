@@ -1,9 +1,9 @@
 <?php
-namespace Hehongyuanlove\AuthQQ;
+namespace HamZone\QQAuth\Api\Controllers;
 
 use League\OAuth2\Client\Provider\ResourceOwnerInterface;
 
-class QQResourceOwner implements ResourceOwnerInterface {
+class QQResourceController implements ResourceOwnerInterface {
     /**
      * Raw response
      *

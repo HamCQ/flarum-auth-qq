@@ -1,6 +1,6 @@
 <?php
 
-namespace Hehongyuanlove\AuthQQ;
+namespace HamZone\QQAuth\Api\Controllers;
 
 use League\OAuth2\Client\Provider\AbstractProvider;
 use League\OAuth2\Client\Provider\Exception\IdentityProviderException;
@@ -9,8 +9,9 @@ use League\OAuth2\Client\Token\AccessTokenInterface;
 use League\OAuth2\Client\Tool\BearerAuthorizationTrait;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use HamZone\QQAuth\Api\Controllers\QQResourceController;
 
-class QQ extends AbstractProvider
+class QQController extends AbstractProvider
 {
   use BearerAuthorizationTrait;
 
@@ -223,7 +224,7 @@ class QQ extends AbstractProvider
    */
   protected function createResourceOwner(array $response, AccessToken $token)
   {
-    return new QQResourceOwner($response);
+    return new QQResourceController($response);
   }
 
   /**

@@ -24,7 +24,7 @@
   ],
   "autoload": {
     "psr-4": {
-      "Hehongyuanlove\\AuthQQ\\": "src/"
+      "HamZone\\QQAuth\\": "src/"
     }
   },
   "extra": {
