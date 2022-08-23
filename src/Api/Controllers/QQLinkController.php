@@ -86,16 +86,18 @@ class QQLinkController implements RequestHandlerInterface
         }
 
         $token = $provider->getAccessToken('authorization_code', compact('code'));
-        /** @var QQResourceController $user */
-        $user = $provider->getResourceOwner($token);
 
-        if ($this->checkLoginProvider($user->getId())) {
+        $fetchOpenId = $provider->fetchOpenId($token);
+        $openId = $fetchOpenId['openid'];
+        // $user = $provider->getResourceOwnerDetailsUrl($token, $openId);
+
+        if ($this->checkLoginProvider( $openId )) {
             return $this->makeResponse('already_used');
         }
                 
         $created = $actor->loginProviders()->create([
             'provider' => 'QQ',
-            'identifier' => $user->getId()
+            'identifier' => $openId
         ]);
 
         return $this->makeResponse($created ? 'done' : 'error');
