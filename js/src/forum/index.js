@@ -12,13 +12,13 @@ import LogInButtons from 'flarum/components/LogInButtons';
 import LogInButton from 'flarum/components/LogInButton';
 import Button from 'flarum/components/Button';
 
-app.initializers.add(`nomiscz/${config.package.name}`, () => {
+app.initializers.add(`hamzone/${config.package.name}`, () => {
 
     extend(SettingsPage.prototype, 'accountItems', (items) => {
         const {
             data: {
                 attributes: {
-                    WeChatAuth: {
+                    QQAuth: {
                         isLinked = false
                     },
                 },
