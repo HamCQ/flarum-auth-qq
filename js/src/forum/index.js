@@ -45,4 +45,4 @@ app.initializers.add(`hamzone/${config.package.name}`, () => {
     });
 });
 
-app.wechat = new Application();
+app.qq = new Application();
