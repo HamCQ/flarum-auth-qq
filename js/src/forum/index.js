@@ -4,7 +4,7 @@ import app from 'flarum/app';
 import config from '../config';
 
 import SettingsPage from 'flarum/components/SettingsPage';
-import Application from './components/Application';
+import QQApplication from './components/QQApplication';
 import UnlinkModal from "./components/UnlinkModal";
 import LinkModal from "./components/LinkModal";
 
@@ -45,4 +45,4 @@ app.initializers.add(`hamzone/${config.package.name}`, () => {
     });
 });
 
-app.qq = new Application();
+app.qq = new QQApplication();
