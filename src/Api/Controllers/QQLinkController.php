@@ -70,7 +70,30 @@ class QQLinkController implements RequestHandlerInterface
         $session = $request->getAttribute('session');
         $queryParams = $request->getQueryParams();
         $code = array_get($queryParams, 'code');
+        $isMobile = false;
 
+        if( strpos($_SERVER['HTTP_USER_AGENT'], 'MicroMessenger') !== false ){
+            $isMobile = true;
+        }
+        if (isset($_SERVER['HTTP_X_WAP_PROFILE'])) {
+            $isMobile = true;
+        }
+        if (isset($_SERVER['HTTP_VIA'])) {
+            $isMobile = stristr($_SERVER['HTTP_VIA'], "wap") ? true : false;
+        }
+        if (isset($_SERVER['HTTP_USER_AGENT'])){
+            if(
+                strpos($_SERVER['HTTP_USER_AGENT'], 'Mobile') !== false||
+                strpos($_SERVER['HTTP_USER_AGENT'], 'Android') !== false||
+                strpos($_SERVER['HTTP_USER_AGENT'], 'Kindle') !== false||
+                strpos($_SERVER['HTTP_USER_AGENT'], 'Opera Mini') !== false||
+                strpos($_SERVER['HTTP_USER_AGENT'], 'Opera Mobi') !== false||
+                strpos($_SERVER['HTTP_USER_AGENT'], 'BlackBerry') !== false
+            ){
+                $isMobile = true;
+            }
+        }
+        
         if (!$code) {
             $authUrl = $provider->getAuthorizationUrl();
             $session->put('oauth2state', $provider->getState());
@@ -100,12 +123,26 @@ class QQLinkController implements RequestHandlerInterface
             'identifier' => $openId
         ]);
 
+        if($isMobile){
+            return $this->makeWXResponse($protocol.$_SERVER['HTTP_HOST']);
+        }
+
         return $this->makeResponse($created ? 'done' : 'error');
     }
 
     private function makeResponse($returnCode = 'done'): HtmlResponse
     {
         $content = "<script>window.close();window.opener.app.qq.linkDone('{$returnCode}');</script>";
+
+        return new HtmlResponse($content);
+    }
+
+    private function makeWXResponse($url): HtmlResponse
+    {
+        $content = `<meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0">
+        绑定成功，正在跳转......`
+        ;
+        $content .= "<script>window.location.href ='".$url."/settings'</script>";
 
         return new HtmlResponse($content);
     }

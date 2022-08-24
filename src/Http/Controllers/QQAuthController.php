@@ -60,6 +60,30 @@ class QQAuthController implements RequestHandlerInterface
         $queryParams = $request->getQueryParams();
         $code = array_get($queryParams, 'code');
 
+        $isMobile = false;
+
+        if( strpos($_SERVER['HTTP_USER_AGENT'], 'MicroMessenger') !== false ){
+            $isMobile = true;
+        }
+        if (isset($_SERVER['HTTP_X_WAP_PROFILE'])) {
+            $isMobile = true;
+        }
+        if (isset($_SERVER['HTTP_VIA'])) {
+            $isMobile = stristr($_SERVER['HTTP_VIA'], "wap") ? true : false;
+        }
+        if (isset($_SERVER['HTTP_USER_AGENT'])){
+            if(
+                strpos($_SERVER['HTTP_USER_AGENT'], 'Mobile') !== false||
+                strpos($_SERVER['HTTP_USER_AGENT'], 'Android') !== false||
+                strpos($_SERVER['HTTP_USER_AGENT'], 'Kindle') !== false||
+                strpos($_SERVER['HTTP_USER_AGENT'], 'Opera Mini') !== false||
+                strpos($_SERVER['HTTP_USER_AGENT'], 'Opera Mobi') !== false||
+                strpos($_SERVER['HTTP_USER_AGENT'], 'BlackBerry') !== false
+            ){
+                $isMobile = true;
+            }
+        }
+        
         if (!$code) {
             $authUrl = $provider->getAuthorizationUrl();
             $session->put('oauth2state', $provider->getState());
@@ -87,7 +111,7 @@ class QQAuthController implements RequestHandlerInterface
         app('log')->debug( $openId );
 
         app('log')->debug( $user['nickname']. $user['figureurl_qq_1']);
-        
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
         return $this->response->make(
             'QQ',
             $openId ,
@@ -97,7 +121,9 @@ class QQAuthController implements RequestHandlerInterface
                     ->setPayload($user);
 
                 $registration->provideAvatar($user['figureurl_qq_1']);
-            }
+            },
+            $isMobile,
+            $protocol.$_SERVER['HTTP_HOST']
         );
     }
 }

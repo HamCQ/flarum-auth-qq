@@ -52,7 +52,18 @@ class QQResponseFactory extends ResponseFactory{
 
         $token = RegistrationToken::generate($provider, $identifier, $provided, $registration->getPayload());
         $token->save();
-      
+
+        if($isMobile){
+            return $this->makeWXResponse(array_merge(
+                $provided,
+                $registration->getSuggested(),
+                [
+                    'token' => $token->token,
+                    'provided' => array_keys($provided)
+                ]
+            ), $url);
+        }
+
         return $this->makeResponse(array_merge(
             $provided,
             $registration->getSuggested(),
@@ -69,6 +80,30 @@ class QQResponseFactory extends ResponseFactory{
             '<script>window.close(); window.opener.app.authenticationComplete(%s);</script>',
             json_encode($payload)
         );
+        return new HtmlResponse($content);
+    }
+
+    private function makeWXResponse(array $payload, $url): HtmlResponse
+    {
+        
+        if(isset($payload["loggedIn"]) && $payload["loggedIn"]){
+            $content = sprintf(
+                '<script>
+                window.location.href="'.$url.'";
+                </script>',
+                json_encode($payload)
+            );
+        }else{
+            $content = sprintf(
+                '<script>
+                window.location.href="'.$url.'/?&wechat_user="+encodeURIComponent(JSON.stringify(%s));
+                </script>',
+                json_encode($payload)
+            );
+        }
+
+       
+        app('log')->debug( $content );
         return new HtmlResponse($content);
     }
 
