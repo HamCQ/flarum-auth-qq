@@ -83,7 +83,7 @@ class QQAuthController implements RequestHandlerInterface
                 $isMobile = true;
             }
         }
-        
+
         if (!$code) {
             $authUrl = $provider->getAuthorizationUrl();
             $session->put('oauth2state', $provider->getState());
@@ -105,13 +105,12 @@ class QQAuthController implements RequestHandlerInterface
         // /** @var QQResourceController $user */
         $user = $provider->getResourceOwnerDetailsUrl($token, $openId);
 
-        // $userInfo = $provider->fetchOpenId($token);
-        app('log')->debug( "token:".$token );
-
-        app('log')->debug( $openId );
-
         app('log')->debug( $user['nickname']. $user['figureurl_qq_1']);
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+        
+        app('log')->debug( $_SERVER['HTTP_USER_AGENT'] );
+        app('log')->debug( $isMobile );
+
         return $this->response->make(
             'QQ',
             $openId ,

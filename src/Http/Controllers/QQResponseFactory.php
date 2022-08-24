@@ -112,6 +112,10 @@ class QQResponseFactory extends ResponseFactory{
     {
         $response = $this->makeResponse(['loggedIn' => true]);
 
+        if ($isMobile){
+            $response = $this->makeWXResponse(['loggedIn' => true], $url);
+        }
+
         $token = RememberAccessToken::generate($user->id);
 
         return $this->rememberer->remember($response, $token);
