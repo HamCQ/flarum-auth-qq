@@ -1,6 +1,6 @@
 <?php
 
-namespace HamZone\QQAuth\Api\Controllers;
+namespace HamCQ\QQAuth\Api\Controllers;
 
 use Fig\Http\Message\StatusCodeInterface;
 use Psr\Http\Message\ResponseInterface;

@@ -9,13 +9,13 @@
  * file that was distributed with this source code.
  */
 
-namespace HamZone\QQAuth;
+namespace HamCQ\QQAuth;
 
 use Flarum\Api\Serializer\UserSerializer;
 use Flarum\Extend;
-use HamZone\QQAuth\Http\Controllers\QQAuthController;
-use HamZone\QQAuth\Api\Controllers\QQLinkController;
-use HamZone\QQAuth\Api\Controllers\QQUnlinkController;
+use HamCQ\QQAuth\Http\Controllers\QQAuthController;
+use HamCQ\QQAuth\Api\Controllers\QQLinkController;
+use HamCQ\QQAuth\Api\Controllers\QQUnlinkController;
 
 use FoF\Components\Extend\AddFofComponents;
 

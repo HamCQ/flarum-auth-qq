@@ -1,5 +1,5 @@
 <?php
-namespace HamZone\QQAuth\Api\Controllers;
+namespace HamCQ\QQAuth\Api\Controllers;
 
 use Exception;
 use Psr\Http\Message\ResponseInterface;
@@ -12,7 +12,7 @@ use Flarum\User\LoginProvider;
 use Flarum\Http\UrlGenerator;
 use Flarum\Settings\SettingsRepositoryInterface;
 
-use HamZone\QQAuth\Api\Controllers\QQController;
+use HamCQ\QQAuth\Api\Controllers\QQController;
 
 class QQLinkController implements RequestHandlerInterface
 {

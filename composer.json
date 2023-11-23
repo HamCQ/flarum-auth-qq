@@ -1,5 +1,5 @@
 {
-  "name": "hamzone/flarum-auth-qq",
+  "name": "hamcq/flarum-auth-qq",
   "description": "Allow users to log in with QQ",
   "keywords": [
     "flarum",
@@ -17,14 +17,14 @@
   },
   "authors": [
     {
-      "name": "HamZone",
-      "email": "support@hamzone.cn",
+      "name": "Emin.lin",
+      "email": "emin.lin@live.com",
       "role": "Developer"
     }
   ],
   "autoload": {
     "psr-4": {
-      "HamZone\\QQAuth\\": "src/"
+      "HamCQ\\QQAuth\\": "src/"
     }
   },
   "extra": {

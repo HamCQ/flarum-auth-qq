@@ -1,5 +1,5 @@
 <?php
-namespace HamZone\QQAuth\Http\Controllers;
+namespace HamCQ\QQAuth\Http\Controllers;
 
 use Flarum\Forum\Auth\ResponseFactory;
 use Flarum\Forum\Auth\Registration;

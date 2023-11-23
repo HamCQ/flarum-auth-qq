@@ -1,5 +1,5 @@
 <?php
-namespace HamZone\QQAuth\Api\Controllers;
+namespace HamCQ\QQAuth\Api\Controllers;
 
 use League\OAuth2\Client\Provider\ResourceOwnerInterface;
 

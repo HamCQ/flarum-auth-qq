@@ -1,5 +1,5 @@
 {
-  "name": "@hamzone/flarum-auth-qq",
+  "name": "@hamcq/flarum-auth-qq",
   "version": "0.0.0",
   "private": true,
   "dependencies": {
@@ -9,6 +9,6 @@
   },
   "scripts": {
     "dev": "webpack --mode development --watch",
-    "build": "webpack --mode production"
+    "build": "export NODE_OPTIONS=--openssl-legacy-provider && webpack --mode production"
   }
 }

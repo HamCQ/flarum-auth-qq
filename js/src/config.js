@@ -1,6 +1,6 @@
 export default {
   module: {
-    name: 'hamzone-auth-qq',
+    name: 'hamcq-auth-qq',
     id: 'QQAuth',
     icon: 'fab fa-qq'
   },

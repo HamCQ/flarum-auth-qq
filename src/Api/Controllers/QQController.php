@@ -1,6 +1,6 @@
 <?php
 
-namespace HamZone\QQAuth\Api\Controllers;
+namespace HamCQ\QQAuth\Api\Controllers;
 
 use League\OAuth2\Client\Provider\AbstractProvider;
 use League\OAuth2\Client\Grant\AbstractGrant;
@@ -9,7 +9,7 @@ use League\OAuth2\Client\Token\AccessToken;
 use League\OAuth2\Client\Tool\ArrayAccessorTrait;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
-use HamZone\QQAuth\Api\Controllers\QQResourceController;
+use HamCQ\QQAuth\Api\Controllers\QQResourceController;
 
 class QQController extends AbstractProvider
 {
