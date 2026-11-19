@@ -12,6 +12,7 @@ use Flarum\User\User;
 use Illuminate\Support\Arr;
 use Laminas\Diactoros\Response\HtmlResponse;
 use Psr\Http\Message\ResponseInterface;
+use HamCQ\QQAuth\QQIdentity;
 
 
 class QQResponseFactory extends ResponseFactory{
@@ -33,10 +34,17 @@ class QQResponseFactory extends ResponseFactory{
         string $identifier, 
         callable $configureRegistration,
         bool $isMobile = false,
-        string $url = ""
+        string $url = "",
+        ?string $unionId = null
         ): ResponseInterface
     {
-        if ($user = LoginProvider::logIn($provider, $identifier)) {
+        $isQQ = in_array($provider, QQIdentity::PROVIDERS, true);
+        if ($isQQ) {
+            $identifier = QQIdentity::openId($identifier);
+            $unionId = QQIdentity::unionId($unionId);
+        }
+        $user = $isQQ ? QQIdentity::logIn($identifier, $unionId) : LoginProvider::logIn($provider, $identifier);
+        if ($user) {
             return $this->makeLoggedInResponse($user, $isMobile, $url);
         }
 
@@ -45,12 +53,17 @@ class QQResponseFactory extends ResponseFactory{
         $provided = $registration->getProvided();
 
         if (! empty($provided['email']) && $user = User::where(Arr::only($provided, 'email'))->first()) {
-            $user->loginProviders()->create(compact('provider', 'identifier'));
+            if ($isQQ) QQIdentity::link($user, $identifier, $unionId);
+            else $user->loginProviders()->create(compact('provider', 'identifier'));
 
             return $this->makeLoggedInResponse($user, $isMobile, $url);
         }
 
-        $token = RegistrationToken::generate($provider, $identifier, $provided, $registration->getPayload());
+        $payload = (array) $registration->getPayload();
+        if ($isQQ) {
+            $payload['_hamcq_qq_identity'] = ['openid' => $identifier, 'unionid' => $unionId];
+        }
+        $token = RegistrationToken::generate($provider, $identifier, $provided, $payload);
         $token->save();
 
         if($isMobile){
@@ -103,7 +116,6 @@ class QQResponseFactory extends ResponseFactory{
         }
 
        
-        app('log')->debug( $content );
         return new HtmlResponse($content);
     }
 

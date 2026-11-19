@@ -122,7 +122,8 @@ class QQAuthController implements RequestHandlerInterface
                 $registration->provideAvatar($user['figureurl_qq_1']);
             },
             $isMobile,
-            $protocol.$_SERVER['HTTP_HOST']
+            $protocol.$_SERVER['HTTP_HOST'],
+            $fetchOpenId['unionid'] ?? null
         );
     }
 }

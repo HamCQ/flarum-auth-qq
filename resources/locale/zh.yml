@@ -5,6 +5,7 @@ hamcq-auth-qq:
       link: 绑定QQ账号
       unlink: 解绑QQ账号
     alerts:
+      identity_conflict: QQ 身份关联存在冲突，请联系管理员处理，系统不会自动合并账号。
       already_linked: QQ账号已绑定！
       already_used: 这个QQ账号已被其他用户绑定！
       link_success: QQ账号绑定成功！

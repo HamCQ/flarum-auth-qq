@@ -10,6 +10,8 @@ use League\OAuth2\Client\Tool\ArrayAccessorTrait;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use HamCQ\QQAuth\Api\Controllers\QQResourceController;
+use HamCQ\QQAuth\QQIdentity;
+use GuzzleHttp\Exception\BadResponseException;
 
 class QQController extends AbstractProvider
 {
@@ -94,30 +96,56 @@ class QQController extends AbstractProvider
         return new AccessToken($response);
   }
 
-  protected function getOpenidUrl(AccessToken $token)
+  protected function getOpenidUrl(AccessToken $token, bool $withUnionId = true)
   {
-    return self::BASE_AUTH_URL . '/oauth2.0/me?access_token=' . $token . '&fmt=json';
+    $params = ['access_token' => $token->getToken(), 'fmt' => 'json'];
+    if ($withUnionId) $params['unionid'] = 1;
+    return self::BASE_AUTH_URL . '/oauth2.0/me?'.http_build_query($params, '', '&', PHP_QUERY_RFC3986);
   }
 
   public function fetchOpenId(AccessToken $token)
   {
-    $url     = $this->getOpenidUrl($token);
-    $request = $this->getAuthenticatedRequest(self::METHOD_GET, $url, $token);
-    return $this->getSpecificResponse($request);
+    try {
+      $request = $this->getAuthenticatedRequest(self::METHOD_GET, $this->getOpenidUrl($token), $token);
+      $identity = $this->getSpecificResponse($request);
+    } catch (IdentityProviderException $error) {
+      if ($error->getCode() !== 100048) throw $error;
+      // UnionID permission is optional; keep legacy OpenID login available.
+      $request = $this->getAuthenticatedRequest(self::METHOD_GET, $this->getOpenidUrl($token, false), $token);
+      $identity = $this->getSpecificResponse($request);
+    }
+    if (!isset($identity['client_id']) || !is_scalar($identity['client_id']) || (string) $identity['client_id'] !== (string) $this->clientId) {
+      throw new \UnexpectedValueException('QQ identity response belongs to a different application');
+    }
+    $identity['openid'] = QQIdentity::openId($identity['openid'] ?? null);
+    $identity['unionid'] = QQIdentity::unionId($identity['unionid'] ?? null);
+    return $identity;
   }
 
   protected function getSpecificResponse(RequestInterface $request)
   {
-    $response = $this->getResponse($request);
+    try {
+      $response = $this->getResponse($request);
+    } catch (BadResponseException $error) {
+      $response = $error->getResponse();
+    }
     $parsed   = $this->parseSpecificResponse($response);
     $this->checkResponse($response, $parsed);
+    if ($response->getStatusCode() >= 400) {
+      throw new IdentityProviderException('QQ API HTTP request failed', $response->getStatusCode(), []);
+    }
     return $parsed;
   }
 
   protected function parseSpecificResponse(ResponseInterface $response)
   {
     $content = (string) $response->getBody();
-    return json_decode($content, true);
+    $parsed = json_decode($content, true);
+    if (!is_array($parsed) && preg_match('/\A\s*callback\s*\(\s*(\{.*\})\s*\)\s*;?\s*\z/s', $content, $matches)) {
+      $parsed = json_decode($matches[1], true);
+    }
+    if (!is_array($parsed)) throw new \UnexpectedValueException('Invalid QQ API response');
+    return $parsed;
   }
 
   /**
@@ -144,8 +172,9 @@ class QQController extends AbstractProvider
 
   protected function checkResponse(ResponseInterface $response, $data)
   {
-    if (isset($data['error'])) {
-      throw new IdentityProviderException($data['error_description'], $response->getStatusCode(), $response);
+    if (isset($data['error']) || (isset($data['ret']) && (int) $data['ret'] !== 0)) {
+      $code = (int) ($data['error'] ?? $data['ret']);
+      throw new IdentityProviderException('QQ API request failed', $code, ['error' => $code]);
     }
   }
 

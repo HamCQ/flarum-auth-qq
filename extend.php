@@ -16,10 +16,13 @@ use Flarum\Extend;
 use HamCQ\QQAuth\Http\Controllers\QQAuthController;
 use HamCQ\QQAuth\Api\Controllers\QQLinkController;
 use HamCQ\QQAuth\Api\Controllers\QQUnlinkController;
+use Flarum\User\Event\RegisteringFromProvider;
+use HamCQ\QQAuth\Listener\StoreUnionId;
 
 use FoF\Components\Extend\AddFofComponents;
 
 return [
+    (new Extend\Event())->listen(RegisteringFromProvider::class, StoreUnionId::class),
     new AddFofComponents(),
 
     (new Extend\Frontend('forum'))
@@ -41,14 +44,7 @@ return [
     (new Extend\ApiSerializer(UserSerializer::class))
         ->attributes(function($serializer, $user, $attributes) {
 
-            $loginProviders = $user->loginProviders();
-            $steamProvider = $loginProviders->where('provider', 'qq')->first();
-
-            $attributes['QQAuth'] = [
-                'isLinked' => $steamProvider !== null,
-                'identifier' => null, // Hidden, don't expose this information
-                'providersCount' => $loginProviders->count()
-            ];
+            $attributes['QQAuth'] = QQIdentity::status($user);
 
             return $attributes;
         }),

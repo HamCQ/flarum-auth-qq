@@ -5,6 +5,7 @@ hamcq-auth-qq:
       link: Link QQ Account
       unlink: Unlink QQ Account
     alerts:
+      identity_conflict: QQ identity associations conflict. Please contact an administrator; accounts will not be merged automatically.
       already_linked: QQ Account is already linked!
       already_used: QQ Account is already linked to another user!
       link_success: QQ Account link successful.

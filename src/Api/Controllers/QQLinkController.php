@@ -13,6 +13,9 @@ use Flarum\Http\UrlGenerator;
 use Flarum\Settings\SettingsRepositoryInterface;
 
 use HamCQ\QQAuth\Api\Controllers\QQController;
+use HamCQ\QQAuth\QQIdentity;
+use Flarum\Http\RequestUtil;
+use Flarum\Foundation\ValidationException;
 
 class QQLinkController implements RequestHandlerInterface
 {
@@ -46,8 +49,9 @@ class QQLinkController implements RequestHandlerInterface
      */
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
-        $actor = $request->getAttribute('actor');
-        $actorLoginProviders = $actor->loginProviders()->where('provider', 'QQ')->first();
+        $actor = RequestUtil::getActor($request);
+        $actor->assertRegistered();
+        $actorLoginProviders = QQIdentity::status($actor)['isLinked'];
 
         if ($actorLoginProviders) {
             return $this->makeResponse('already_linked');
@@ -112,20 +116,17 @@ class QQLinkController implements RequestHandlerInterface
         $openId = $fetchOpenId['openid'];
         // $user = $provider->getResourceOwnerDetailsUrl($token, $openId);
 
-        if ($this->checkLoginProvider( $openId )) {
+        try {
+            QQIdentity::link($actor, $openId, $fetchOpenId['unionid'] ?? null);
+        } catch (ValidationException $error) {
             return $this->makeResponse('already_used');
         }
-                
-        $created = $actor->loginProviders()->create([
-            'provider' => 'QQ',
-            'identifier' => $openId
-        ]);
 
         if($isMobile){
             return $this->makeWXResponse($protocol.$_SERVER['HTTP_HOST']);
         }
 
-        return $this->makeResponse($created ? 'done' : 'error');
+        return $this->makeResponse('done');
     }
 
     public function makeResponse($returnCode = 'done'): HtmlResponse
@@ -137,8 +138,8 @@ class QQLinkController implements RequestHandlerInterface
 
     public function makeWXResponse($url): HtmlResponse
     {
-        $content = `<meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0">
-        绑定成功，正在跳转......`
+        $content = '<meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0">
+        绑定成功，正在跳转......'
         ;
         $content .= "<script>window.location.href ='".$url."/settings'</script>";
 

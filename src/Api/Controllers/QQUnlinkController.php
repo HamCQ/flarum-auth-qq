@@ -7,6 +7,8 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Laminas\Diactoros\Response\EmptyResponse;
+use Flarum\Http\RequestUtil;
+use HamCQ\QQAuth\QQIdentity;
 
 class QQUnlinkController implements RequestHandlerInterface
 {
@@ -17,14 +19,10 @@ class QQUnlinkController implements RequestHandlerInterface
      */
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
-        $actor = $request->getAttribute('actor');
-        $actorLoginProviders = $actor->loginProviders()->where('provider', 'QQ')->first();
-
-        if (!$actorLoginProviders) {
+        $actor = RequestUtil::getActor($request);
+        if (!QQIdentity::unlink($actor)) {
             return new EmptyResponse(StatusCodeInterface::STATUS_BAD_REQUEST);
         }
-
-        $actorLoginProviders->delete();
 
         return new EmptyResponse(StatusCodeInterface::STATUS_OK);
     }
