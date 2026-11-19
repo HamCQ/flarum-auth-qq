@@ -117,7 +117,7 @@ class QQLinkController implements RequestHandlerInterface
         // $user = $provider->getResourceOwnerDetailsUrl($token, $openId);
 
         try {
-            QQIdentity::link($actor, $openId, $fetchOpenId['unionid'] ?? null);
+            QQIdentity::link($actor, $openId, $fetchOpenId['unionid'] ?? null, $request);
         } catch (ValidationException $error) {
             return $this->makeResponse('already_used');
         }

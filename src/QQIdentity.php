@@ -5,6 +5,7 @@ namespace HamCQ\QQAuth;
 use Flarum\Foundation\ValidationException;
 use Flarum\User\LoginProvider;
 use Flarum\User\User;
+use Psr\Http\Message\ServerRequestInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class QQIdentity
@@ -28,37 +29,37 @@ class QQIdentity
         return $value;
     }
 
-    public static function logIn(string $openId, ?string $unionId): ?User
+    public static function logIn(string $openId, ?string $unionId, ?ServerRequestInterface $request = null): ?User
     {
         $openId = self::openId($openId);
         $unionId = self::unionId($unionId);
-        return (new User())->getConnection()->transaction(function () use ($openId, $unionId) {
+        return (new User())->getConnection()->transaction(function () use ($openId, $unionId, $request) {
             $binding = LoginProvider::whereIn('provider', self::PROVIDERS)->where('identifier', $openId)->lockForUpdate()->first();
             $unionUser = $unionId === null ? null : User::where('qq_unionid', $unionId)->lockForUpdate()->first();
             if ($binding && $unionUser && (int) $binding->user_id !== (int) $unionUser->id) self::conflict();
             $user = $binding ? User::where('id', $binding->user_id)->lockForUpdate()->firstOrFail() : $unionUser;
             if (!$user) return null;
-            self::attach($user, $openId, $unionId, $binding);
+            self::attach($user, $openId, $unionId, $binding, $request);
             return $user;
         }, 3);
     }
 
-    public static function link(User $actor, string $openId, ?string $unionId): void
+    public static function link(User $actor, string $openId, ?string $unionId, ?ServerRequestInterface $request = null): void
     {
         $actor->assertRegistered();
         $openId = self::openId($openId);
         $unionId = self::unionId($unionId);
-        $actor->getConnection()->transaction(function () use ($actor, $openId, $unionId) {
+        $actor->getConnection()->transaction(function () use ($actor, $openId, $unionId, $request) {
             $user = User::where('id', $actor->id)->lockForUpdate()->firstOrFail();
             $binding = LoginProvider::whereIn('provider', self::PROVIDERS)->where('identifier', $openId)->lockForUpdate()->first();
             if ($binding && (int) $binding->user_id !== (int) $user->id) self::conflict();
             // Do not let concurrent callbacks bind different QQ accounts to the same user.
             if (!$binding && $user->loginProviders()->whereIn('provider', self::PROVIDERS)->exists()) self::conflict();
-            self::attach($user, $openId, $unionId, $binding);
+            self::attach($user, $openId, $unionId, $binding, $request);
         }, 3);
     }
 
-    private static function attach(User $user, string $openId, ?string $unionId, ?LoginProvider $binding): void
+    private static function attach(User $user, string $openId, ?string $unionId, ?LoginProvider $binding, ?ServerRequestInterface $request): void
     {
         if ($unionId !== null) {
             if ($user->qq_unionid !== null && $user->qq_unionid !== '' && $user->qq_unionid !== $unionId) self::conflict();
@@ -69,21 +70,29 @@ class QQIdentity
             }
         }
         if ($binding) $binding->touch();
-        else $user->loginProviders()->create(['provider' => 'QQ', 'identifier' => $openId]);
+        else {
+            $binding = $user->loginProviders()->create(['provider' => 'QQ', 'identifier' => $openId]);
+            BindingHistory::record($binding, 'bind', $request);
+        }
     }
 
-    public static function unlink(User $actor): bool
+    public static function unlink(User $actor, ?ServerRequestInterface $request = null): bool
     {
         $actor->assertRegistered();
-        return $actor->getConnection()->transaction(function () use ($actor) {
+        return $actor->getConnection()->transaction(function () use ($actor, $request) {
             $user = User::where('id', $actor->id)->lockForUpdate()->firstOrFail();
-            $count = $user->loginProviders()->whereIn('provider', self::PROVIDERS)->delete();
+            $bindings = $user->loginProviders()->whereIn('provider', self::PROVIDERS)->lockForUpdate()->get();
+            foreach ($bindings as $binding) {
+                BindingHistory::record($binding, 'unbind', $request);
+                $binding->delete();
+            }
             $hasUnionId = $user->qq_unionid !== null && $user->qq_unionid !== '';
             if ($hasUnionId) {
+                if ($bindings->isEmpty()) BindingHistory::recordUnionUnlink($user, $request);
                 $user->qq_unionid = null;
                 $user->save();
             }
-            return $count > 0 || $hasUnionId;
+            return $bindings->isNotEmpty() || $hasUnionId;
         }, 3);
     }
 

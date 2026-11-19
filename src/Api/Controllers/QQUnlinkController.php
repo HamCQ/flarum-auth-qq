@@ -20,7 +20,7 @@ class QQUnlinkController implements RequestHandlerInterface
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         $actor = RequestUtil::getActor($request);
-        if (!QQIdentity::unlink($actor)) {
+        if (!QQIdentity::unlink($actor, $request)) {
             return new EmptyResponse(StatusCodeInterface::STATUS_BAD_REQUEST);
         }
 

@@ -12,6 +12,7 @@ use Flarum\User\User;
 use Illuminate\Support\Arr;
 use Laminas\Diactoros\Response\HtmlResponse;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
 use HamCQ\QQAuth\QQIdentity;
 
 
@@ -35,7 +36,8 @@ class QQResponseFactory extends ResponseFactory{
         callable $configureRegistration,
         bool $isMobile = false,
         string $url = "",
-        ?string $unionId = null
+        ?string $unionId = null,
+        ?ServerRequestInterface $request = null
         ): ResponseInterface
     {
         $isQQ = in_array($provider, QQIdentity::PROVIDERS, true);
@@ -43,7 +45,7 @@ class QQResponseFactory extends ResponseFactory{
             $identifier = QQIdentity::openId($identifier);
             $unionId = QQIdentity::unionId($unionId);
         }
-        $user = $isQQ ? QQIdentity::logIn($identifier, $unionId) : LoginProvider::logIn($provider, $identifier);
+        $user = $isQQ ? QQIdentity::logIn($identifier, $unionId, $request) : LoginProvider::logIn($provider, $identifier);
         if ($user) {
             return $this->makeLoggedInResponse($user, $isMobile, $url);
         }
@@ -53,7 +55,7 @@ class QQResponseFactory extends ResponseFactory{
         $provided = $registration->getProvided();
 
         if (! empty($provided['email']) && $user = User::where(Arr::only($provided, 'email'))->first()) {
-            if ($isQQ) QQIdentity::link($user, $identifier, $unionId);
+            if ($isQQ) QQIdentity::link($user, $identifier, $unionId, $request);
             else $user->loginProviders()->create(compact('provider', 'identifier'));
 
             return $this->makeLoggedInResponse($user, $isMobile, $url);

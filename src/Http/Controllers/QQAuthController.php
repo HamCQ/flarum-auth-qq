@@ -123,7 +123,8 @@ class QQAuthController implements RequestHandlerInterface
             },
             $isMobile,
             $protocol.$_SERVER['HTTP_HOST'],
-            $fetchOpenId['unionid'] ?? null
+            $fetchOpenId['unionid'] ?? null,
+            $request
         );
     }
 }

@@ -20,6 +20,7 @@ use Flarum\User\LoginProvider;
 use Flarum\User\RegistrationToken;
 use Flarum\User\User;
 use HamCQ\QQAuth\QQIdentity;
+use HamCQ\QQAuth\BindingHistory;
 use HamCQ\QQAuth\Listener\StoreUnionId;
 use HamCQ\QQAuth\Api\Controllers\QQController;
 use HamCQ\QQAuth\Api\Controllers\QQUnlinkController;
@@ -96,12 +97,15 @@ $schema->create('registration_tokens', function (Blueprint $table) {
     $table->string('token', 40)->primary(); $table->string('provider'); $table->string('identifier');
     $table->text('user_attributes'); $table->text('payload'); $table->dateTime('created_at');
 });
+$historyMigration = require dirname(__DIR__).'/migrations/2026_11_19_010000_create_qq_binding_history.php';
+$historyMigration['up']($schema); $historyMigration['up']($schema);
 $legacy = qqUser('legacy');
 $legacyBinding = $legacy->loginProviders()->create(['provider' => 'QQ', 'identifier' => 'old-openid']);
 $lower = qqUser('lowercase'); $lower->loginProviders()->create(['provider' => 'qq', 'identifier' => 'lower-openid']);
 $original = $db->table('login_providers')->get()->toJson();
 $migration = require dirname(__DIR__).'/migrations/2026_11_19_000000_add_qq_unionid.php';
 $migration['up']($schema); $migration['up']($schema);
+qqCheck($db->table('qq_binding_history')->count() === 0, 'Installing history never invents events for existing bindings');
 $mysql = new Illuminate\Database\MySqlConnection(null, 'qq_test', 'prefix_');
 $blueprint = new Blueprint('users');
 $blueprint->string('qq_unionid', 64)->nullable()->charset('utf8mb4')->collation('utf8mb4_bin');
@@ -244,4 +248,82 @@ foreach (['en', 'zh', 'zh-Hans'] as $locale) {
     $translator->setLocale($locale);
     qqCheck(!str_contains($translator->trans('hamcq-auth-qq.forum.alerts.identity_conflict'), 'hamcq-auth-qq.'), 'Localized conflict message for '.$locale);
 }
-echo "PASS: $checks QQ OAuth, legacy login, registration, ownership, unlink and migration checks.\n";
+function qqDuring($request, callable $callback, int $status = 200) {
+    return (new BindingHistory())->process($request, new class($callback, $status) implements Psr\Http\Server\RequestHandlerInterface {
+        private $callback;
+        private $status;
+        public function __construct($callback, $status) { $this->callback = $callback; $this->status = $status; }
+        public function handle(Psr\Http\Message\ServerRequestInterface $request): Psr\Http\Message\ResponseInterface {
+            ($this->callback)($request);
+            return new Laminas\Diactoros\Response\EmptyResponse($this->status);
+        }
+    });
+}
+$historyUser = qqUser('history');
+$auditRequest = RequestUtil::withActor(new Laminas\Diactoros\ServerRequest(['REMOTE_ADDR' => '192.0.2.10']), $historyUser)
+    ->withAttribute('ipAddress', '2001:db8::123')->withHeader('X-Forwarded-For', '198.51.100.99');
+qqDuring($auditRequest, fn($request) => QQIdentity::link($historyUser, 'history-openid', 'history-union', $request));
+$row = $db->table('qq_binding_history')->where('user_id', $historyUser->id)->first();
+qqCheck($row->action === 'bind' && $row->identifier === 'history-openid' && $row->union_id === 'history-union', 'History snapshots both verified QQ identities');
+qqCheck($row->ip === '2001:db8::123' && (int) $row->actor_id === $historyUser->id && $row->bound_at && $row->created_at, 'History stores trusted IPv6, actor and binding/event timestamps');
+$count = $db->table('qq_binding_history')->count();
+qqDuring($auditRequest, fn($request) => QQIdentity::logIn('history-openid', 'history-union', $request));
+qqCheck($db->table('qq_binding_history')->count() === $count, 'Ordinary login does not duplicate binding history');
+qqDuring($auditRequest, fn($request) => $factory->make('QQ', 'another-history-openid', fn($registration) => null, false, '', 'history-union', $request));
+qqCheck($db->table('qq_binding_history')->where('user_id', $historyUser->id)->where('action', 'bind')->count() === 2, 'Additional OpenID attached through UnionID is audited');
+$remoteRequest = $auditRequest->withoutAttribute('ipAddress');
+qqDuring($remoteRequest, fn($request) => (new QQUnlinkController())->handle($request));
+$unlinks = $db->table('qq_binding_history')->where('user_id', $historyUser->id)->where('action', 'unbind')->get();
+qqCheck($unlinks->count() === 2 && $unlinks->every(fn($row) => $row->union_id === 'history-union' && $row->ip === '192.0.2.10'), 'Unlink snapshots every OpenID and UnionID before clearing the user field');
+qqCheck($historyUser->fresh()->qq_unionid === null, 'QQ unlink still clears the active UnionID');
+$count = $db->table('qq_binding_history')->count();
+qqDuring($auditRequest, fn($request) => QQIdentity::unlink($historyUser, $request));
+qqCheck($db->table('qq_binding_history')->count() === $count, 'Repeated unlink does not produce a false event');
+qqDuring($auditRequest, fn($request) => QQIdentity::link($historyUser, 'history-openid', 'history-union', $request));
+qqCheck($db->table('qq_binding_history')->where('user_id', $historyUser->id)->where('action', 'bind')->count() === 3, 'Rebinding appends rather than overwrites history');
+$before = $db->table('qq_binding_history')->count();
+qqReject(fn() => qqDuring($auditRequest, fn() => QQIdentity::link($fresh, 'history-openid', 'history-union')), ValidationException::class);
+qqCheck($db->table('qq_binding_history')->count() === $before, 'Rejected bindings do not create successful history');
+$noIP = RequestUtil::withActor((new Laminas\Diactoros\ServerRequest())->withHeader('X-Forwarded-For', '198.51.100.99'), $fresh);
+$binding = $fresh->loginProviders()->create(['provider' => 'QQ', 'identifier' => 'no-ip-history']);
+qqCheck(!$db->table('qq_binding_history')->where('identifier', 'no-ip-history')->exists(), 'Raw model creation does not use any audit event listener');
+BindingHistory::record($binding, 'bind', $noIP);
+qqCheck($db->table('qq_binding_history')->where('identifier', 'no-ip-history')->value('ip') === null, 'Never trust a supplied forwarding header without server IP resolution');
+$binding = $fresh->loginProviders()->create(['provider' => 'QQ', 'identifier' => 'outside-request-history']);
+BindingHistory::record($binding, 'bind');
+qqCheck($db->table('qq_binding_history')->where('identifier', 'outside-request-history')->value('ip') === null, 'Request IP cannot leak into a later operation');
+$onlyUnion = qqUser('onlyunion'); $onlyUnion->qq_unionid = 'standalone-union'; $onlyUnion->save();
+qqDuring($auditRequest, fn($request) => QQIdentity::unlink($onlyUnion, $request));
+$row = $db->table('qq_binding_history')->where('user_id', $onlyUnion->id)->first();
+qqCheck($row->action === 'unbind' && $row->identifier === null && $row->union_id === 'standalone-union', 'UnionID-only unlink also leaves an identity snapshot');
+
+function qqSignupRequest(string $identifier, string $username): array {
+    $token = RegistrationToken::generate('QQ', $identifier, [], []); $token->save();
+    $data = ['attributes' => ['username' => $username, 'email' => $username.'@example.test', 'token' => $token->token]];
+    $request = RequestUtil::withActor((new Laminas\Diactoros\ServerRequest(['REMOTE_ADDR' => '192.0.2.25']))->withMethod('POST'), new Guest())
+        ->withAttribute('routeName', 'users.create')->withParsedBody(['data' => $data]);
+    return [$request, $data, $token];
+}
+[$signupRequest, $signupData] = qqSignupRequest('history-signup', 'historysignup');
+qqDuring($signupRequest, fn() => $registrar->handle(new RegisterUser(new Guest(), $signupData)));
+$row = $db->table('qq_binding_history')->where('identifier', 'history-signup')->first();
+qqCheck($row && $row->action === 'bind' && $row->ip === '192.0.2.25' && $row->actor_id === null, 'First registration records its binding with the final user ID and request IP');
+$schema->rename('qq_binding_history', 'qq_binding_history_unavailable');
+$failedBind = qqUser('failedbind');
+qqReject(fn() => qqDuring($auditRequest, fn() => QQIdentity::link($failedBind, 'must-rollback', 'must-rollback-union')), Illuminate\Database\QueryException::class);
+qqCheck(!$failedBind->loginProviders()->exists() && $failedBind->fresh()->qq_unionid === null, 'Audit failure rolls back binding and UnionID together');
+qqReject(fn() => qqDuring($auditRequest, fn() => QQIdentity::unlink($historyUser)), Illuminate\Database\QueryException::class);
+qqCheck($historyUser->loginProviders()->where('identifier', 'history-openid')->exists() && $historyUser->fresh()->qq_unionid === 'history-union', 'Audit failure rolls back unlink and keeps both login identities');
+[$failedRequest, $failedData, $failedToken] = qqSignupRequest('failed-history-signup', 'failedhistorysignup');
+$usersBefore = User::count();
+qqReject(fn() => qqDuring($failedRequest, fn() => $registrar->handle(new RegisterUser(new Guest(), $failedData))), Illuminate\Database\QueryException::class);
+qqCheck(User::count() === $usersBefore && RegistrationToken::where('token', $failedToken->token)->exists() && !LoginProvider::where('identifier', 'failed-history-signup')->exists(), 'Audit failure rolls back new account, registration token consumption and OpenID');
+qqCheck($db->transactionLevel() === 0, 'Errors restore transaction nesting');
+$schema->rename('qq_binding_history_unavailable', 'qq_binding_history');
+[$failedRequest, $failedData] = qqSignupRequest('status-history-signup', 'statushistorysignup');
+qqDuring($failedRequest, fn() => $registrar->handle(new RegisterUser(new Guest(), $failedData)), 422);
+qqCheck(!User::where('username', 'statushistorysignup')->exists() && !$db->table('qq_binding_history')->where('identifier', 'status-history-signup')->exists(), 'A failed HTTP response cannot commit a registration or audit row');
+$rowsBefore = $db->table('qq_binding_history')->count();
+$historyMigration['down']($schema); $historyMigration['up']($schema);
+qqCheck($db->table('qq_binding_history')->count() === $rowsBefore, 'Migration rerun and uninstall preserve all historical rows');
+echo "PASS: $checks QQ OAuth, legacy login, registration, ownership, unlink and history checks.\n";

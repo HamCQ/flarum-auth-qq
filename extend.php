@@ -23,6 +23,7 @@ use FoF\Components\Extend\AddFofComponents;
 
 return [
     (new Extend\Event())->listen(RegisteringFromProvider::class, StoreUnionId::class),
+    (new Extend\Middleware('api'))->add(BindingHistory::class),
     new AddFofComponents(),
 
     (new Extend\Frontend('forum'))
